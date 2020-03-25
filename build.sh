@@ -16,7 +16,8 @@
 ### 
 
 O_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
-
+O_CC='gcc'
+O_CXX='g++'
 
 ###
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -284,6 +285,8 @@ build_vkd3d(){
     
     #### 64b
     cd ../build64
+    export CC=$O_CC
+    export CXX=$O_CXX
     export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
     ../configure --prefix=/usr --libdir=/usr/lib64 --with-spirv-tools
     make -j"$threads"
@@ -327,7 +330,7 @@ build_gstreamer(){
     mkdir build32
     mkdir build64
     #### 32b
-    cd    build32
+    cd    ./build32
     export CC='gcc -m32'
     export CXX='g++ -m32'
     export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
@@ -346,8 +349,9 @@ build_gstreamer(){
     export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
     
     #### 64b
-    cd ../build64 &&
-
+    cd ../build64 
+    export CC=$O_CC
+    export CXX=$O_CXX
     meson  --prefix=/usr       \
         --libdir=/usr/lib64 \
         -Dbuildtype=release \
@@ -364,7 +368,7 @@ build_gstreamer(){
     mkdir build32
     mkdir build64
     #### 32b
-    cd    build32
+    cd    ./build32
     export CC='gcc -m32'
     export CXX='g++ -m32'
     export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
@@ -383,7 +387,8 @@ build_gstreamer(){
     
     #### 64b
     cd ../build64
-
+    export CC=$O_CC
+    export CXX=$O_CXX
     meson  --prefix=/usr       \
     --libdir=/usr/lib64 \
     --bindir=/usr/bin \
@@ -394,12 +399,12 @@ build_gstreamer(){
     ninja
     ninja install
     
-    cd ../../gst-plugins-base
+    cd ../../gst-plugins-good
     
     mkdir build32
     mkdir build64
     #### 32b
-    cd    build32
+    cd    ./build32
     export CC='gcc -m32'
     export CXX='g++ -m32'
     export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
@@ -418,7 +423,8 @@ build_gstreamer(){
     
     #### 64b
     cd ../build64
-
+    export CC=$O_CC
+    export CXX=$O_CXX
     meson  --prefix=/usr       \
     --libdir=/usr/lib64 \
     --bindir=/usr/bin \
