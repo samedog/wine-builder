@@ -8,11 +8,20 @@
 #
 # 24-03-2020:   - first release
 #               - wine-tkg-git not needed sice GE already has the patches
+# 25-03-2020    - fixed dxvk multilib compiling
+#				- added gstramer, gst-plugins-base and gst-plugins-good
+#				- $DIRECTORY used to ensure current location instead of relynig
+#				  on "cd .." chains
 ##########################################################################################
+### 
 
+O_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
+
+
+###
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-threads=$(grep -c processor /proc/cpuinfo)
+threads=threads=$(grep -c processor /proc/cpuinfo)
 dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
 
@@ -74,6 +83,36 @@ process_repos() {
         cd ..
     fi
 
+    if [ ! -d "gstreamer" ];then
+        git clone git://github.com/GStreamer/gstreamer
+    else
+        cd ./gstreamer
+        git clean -fxd
+        git pull --force
+        git reset --hard HEAD
+        cd ..
+    fi
+    
+    if [ ! -d "gst-plugins-base" ];then
+        git clone git://github.com/GStreamer/gst-plugins-base
+    else
+        cd ./gst-plugins-base
+        git clean -fxd
+        git pull --force
+        git reset --hard HEAD
+        cd ..
+    fi
+    
+    if [ ! -d "gst-plugins-good" ];then
+        git clone git://github.com/GStreamer/gst-plugins-good
+    else
+        cd ./gst-plugins-good
+        git clean -fxd
+        git pull --force
+        git reset --hard HEAD
+        cd ..
+    fi
+
     if [ ! -d "wine" ];then
         git clone git://source.winehq.org/git/wine.git
     else
@@ -83,6 +122,7 @@ process_repos() {
         git reset --hard HEAD
         cd ..
     fi
+    
     
     if [ ! -d "proton-ge-custom" ];then
         mkdir ./proton-ge-custom
@@ -104,9 +144,12 @@ process_repos() {
 }
 
 prepare(){
-
+	cd "$DIRECTORY"
     cp -rf ./wine ./wine_prepare
     cp -rf ./custom-patches ./wine_prepare/custom-patches
+    cp -rf ./gstreamer ./wine_prepare/gstreamer
+    cp -rf ./gst-plugins-base ./wine_prepare/gst-plugins-base
+    cp -rf ./gst-plugins-good ./wine_prepare/gst-plugins-good
     cp -rf ./wine-staging ./wine_prepare/wine-staging
     cp -rf ./proton-ge-custom/game-patches-testing/ ./wine_prepare/game-patches-testing
     cp -rf ./vkd3d ./wine_prepare/vkd3d
@@ -117,8 +160,9 @@ prepare(){
 }
 
 patches() {
-
+	cd "$DIRECTORY"/wine_prepare
     cd ./game-patches-testing
+    ###WE REMOVE A LOT OF UNUSED {BY THS BULDER} STUFF
     sed -i 's/cd \.\.//g' protonprep.sh
     sed -i 's/cd dxvk//g' protonprep.sh
     sed -i 's/cd vkd3d//g' protonprep.sh
@@ -148,18 +192,28 @@ patches() {
 
 build_headers() {
     ##
+    cd "$DIRECTORY"/wine_prepare
     cd ./SPIRV-Headers
     mkdir build
     cd build
     cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-    
     make -j"$threads"
     make install
-    cd ../..
     ##
+    cd ../../Vulkan-Headers
+    mkdir build
+    cd build
+    cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+    make -j"$threads"
+    make install
+}
+
+build_sprv_tools(){
+	cd "$DIRECTORY"/wine_prepare
     cd ./SPIRV-Tools
     mkdir build64
     mkdir build32
+    #### 32b
     cd ./build32
     cmake -DCMAKE_TOOLCHAIN_FILE=../../32bit.toolchain \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -170,6 +224,8 @@ build_headers() {
         -DSPIRV-Headers_SOURCE_DIR=$DIRECTORY/wine_prepare/SPIRV-Headers ..
     make -j"$threads"
     make install
+    
+    #### 64b
     cd ../build64
     cmake -DCMAKE_TOOLCHAIN_FILE=../../64bit.toolchain \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -181,19 +237,15 @@ build_headers() {
     make -j"$threads"
     make install
     ##
-    cd ../../Vulkan-Headers
-    mkdir build
-    cd build
-    cmake -DCMAKE_INSTALL_PREFIX=/usr ..
-    make -j"$threads"
-    make install
-    cd ../..
 }
 
 build_vulkan(){
+	cd "$DIRECTORY"/wine_prepare
     cd ./Vulkan-Loader
     mkdir build64
     mkdir build32
+
+    #### 32b
     cd build32
     i386 cmake -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -202,67 +254,180 @@ build_vulkan(){
         -DCMAKE_C_FLAGS="-m32" ..
     make -j"$threads"
     make install
+
+    #### 64b
     cd ../build64
     cmake -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib64 ..
     make -j"$threads"
     make install
-    cd ../..
-    
-
 }
 
 build_vkd3d(){
-    cd ./vkd3d
+	cd "$DIRECTORY"/wine_prepare
+	cd ./vkd3d
     ./autogen.sh
     mkdir build32
     mkdir build64
+    
+    #### 32b
     cd build32
-    O_PATH="$PATH"
-    export PATH="/usr/bin/32:$PATH"
-    O_LD_LIBRARY_PATH="$LD_LIBRARY_PATH"
-    export LD_LIBRARY_PATH="/usr/local/lib:/lib:/usr/lib:$LD_LIBRARY_PATH"
-    O_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
-    export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/lib/pkgconfig:$PKG_CONFIG_PATH"
-    i386 ../configure --prefix=/usr --libdir=/usr/lib --with-spirv-tools
-    i386 make -j"$threads"
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG_PATH=/usr/lib/pkgconfig
+	export LDFLAGS="-L/usr/lib"
+    ../configure --prefix=/usr --libdir=/usr/lib --with-spirv-tools
+    make -j"$threads"
     make install
+    export PKG_CONFIG_PATH=$O_PKG_CONFIG_PATH
+    
+    #### 64b
     cd ../build64
-    export PATH="$O_PATH"
-    export LD_LIBRARY_PATH="$O_LD_LIBRARY_PATH"
     export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
     ../configure --prefix=/usr --libdir=/usr/lib64 --with-spirv-tools
     make -j"$threads"
     make install
-    cd ../..
-    
 }
 
 build_wine(){
+	cd "$DIRECTORY"/wine_prepare
     mkdir build32
     mkdir build64
-    cd build64
+ 
+	#### 32b
+    cd ./build32
+	../configure \
+        --prefix=/usr \
+        --with-x \
+        --with-vkd3d \
+        --libdir=/usr/lib \
+        --with-gstreamer \
+        --with-wine64="$DIRECTORY/wine_prepare/build64"
+    make -j"$threads"
+    make install
+      
+    #### 64b
+    cd ../build64
     ../configure \
         --prefix=/usr \
         --libdir=/usr/lib64 \
         --with-x \
         --with-vkd3d \
+        --with-gstreamer \
         --enable-win64
-    cd ../build32
-    ../configure \
-        --prefix=/usr \
-        --with-x \
-        --with-vkd3d \
-        --libdir=/usr/lib \
-        --with-wine64="$DIRECTORY/wine_prepare/build64"
-    make -j"$threads"
-    cd ../build64
     make install
-    cd ../build32
-    make install
-
 }
+
+build_gstreamer(){
+	cd "$DIRECTORY"/wine_prepare
+	cd ./gstreamer
+	mkdir build32
+	mkdir build64
+	#### 32b
+	cd    build32
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
+	
+	meson  --prefix=/usr       \
+		--libdir=/usr/lib \
+		--bindir=/usr/bin32 \
+		-Dbuildtype=release \
+		-Dgst_debug=false   \
+		-Dgtk_doc=disabled  \
+		-Dpackage-origin="git://github.com/GStreamer/gstreamer" \
+		-Dpackage-name="GStreamer (Frankenpup Linux)" 
+	ninja
+	rm -rf /usr/bin/gst-* /usr/lib/gstreamer-1.0
+	ninja install
+	export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
+	
+	#### 64b
+	cd ../build64 &&
+
+	meson  --prefix=/usr       \
+		--libdir=/usr/lib64 \
+		-Dbuildtype=release \
+		-Dgst_debug=false   \
+		-Dgtk_doc=disabled  \
+		-Dpackage-origin="http://github.com/GStreamer/gstreamer" \
+		-Dpackage-name="GStreamer (Frankenpup Linux)" 
+	ninja
+	rm -rf /usr/bin/gst-* /usr/{lib64,libexec}/gstreamer-1.0
+	ninja install
+	
+	cd ../../gst-plugins-base
+	
+	mkdir build32
+	mkdir build64
+	#### 32b
+	cd    build32
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
+	
+	meson  --prefix=/usr       \
+	--libdir=/usr/lib \
+	--bindir=/usr/bin32 \
+	-Dbuildtype=release \
+	-Dgtk_doc=disabled  \
+	-Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
+	-Dpackage-name="GStreamer (Frankenpup Linux)" 
+
+	ninja
+	ninja install
+	export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
+	
+	#### 64b
+	cd ../build64
+
+	meson  --prefix=/usr       \
+	--libdir=/usr/lib64 \
+	--bindir=/usr/bin \
+	-Dbuildtype=release \
+	-Dgtk_doc=disabled  \
+	-Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
+	-Dpackage-name="GStreamer (Frankenpup Linux)" 
+	ninja
+	ninja install
+	
+	cd ../../gst-plugins-base
+	
+	mkdir build32
+	mkdir build64
+	#### 32b
+	cd    build32
+	export CC='gcc -m32'
+	export CXX='g++ -m32'
+	export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
+	
+	meson  --prefix=/usr       \
+	--libdir=/usr/lib \
+	--bindir=/usr/bin32 \
+	-Dbuildtype=release \
+	-Dgtk_doc=disabled  \
+	-Dpackage-origin="http://github.com/GStreamer/gst-good" \
+	-Dpackage-name="GStreamer (Frankenpup Linux)" 
+
+	ninja
+	ninja install
+	export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
+	
+	#### 64b
+	cd ../build64
+
+	meson  --prefix=/usr       \
+	--libdir=/usr/lib64 \
+	--bindir=/usr/bin \
+	-Dbuildtype=release \
+	-Dgtk_doc=disabled  \
+	-Dpackage-origin="http://github.com/GStreamer/gst-plugins-good" \
+	-Dpackage-name="GStreamer (Frankenpup Linux)" &&
+	ninja
+	ninja install
+}
+
 
 cleanup(){
     if [ -d "wine_prepare" ];then
@@ -272,6 +437,7 @@ cleanup(){
 }
 
 dxvk(){
+	cd "$DIRECTORY"
 	wget https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz
 	tar xf dxvk-1.6.tar.gz
 	dxvk-1.6/setup_dxvk.sh install
@@ -280,21 +446,36 @@ dxvk(){
 cleanup
 echo "HELLO THERE!"
 echo "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)"
+
 echo "cleanup"
+cleanup
+
 echo "cloning repos"
 process_repos
+
 echo "preparing folders..."
 prepare
-cd ./wine_prepare
+
 echo "applying patchs to wine source..."
 patches
+
 echo "building headers"
 build_headers
+
+echo "building SPIRV-Tools (32 and 64 bits)"
+build_sprv_tools
+
 echo "building and installing vulkan (32 and 64 bits)"
 build_vulkan
+
 echo "building and installing vkd3d (32 and 64 bits)"
 build_vkd3d
+
+echo "building and installing gstreamer (32 and 64 bits)"
+build_gstreamer
+
 echo "building and installing wine (32 and 64 bits)"
 build_wine
+
 echo "installnig dxvk"
 dxvk
