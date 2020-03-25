@@ -1,4 +1,4 @@
-NOPE
+this reverts the valve user folder rename
 ---
  dlls/advapi32/advapi.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
