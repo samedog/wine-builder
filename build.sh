@@ -272,10 +272,11 @@ cleanup(){
 }
 
 dxvk(){
-wget https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz
-tar xf dxvk-1.6.tar.gz
-dxvk-1.6/setup_dxvk.sh install
+	wget https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz
+	tar xf dxvk-1.6.tar.gz
+	dxvk-1.6/setup_dxvk.sh install
 }
+
 cleanup
 echo "HELLO THERE!"
 echo "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)"
