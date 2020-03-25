@@ -1,0 +1,67 @@
+--- shellpath.c	2020-03-25 00:47:59.792602575 -0300
++++ shellpath2.c	2020-03-25 00:46:13.822600204 -0300
+@@ -4120,7 +4120,7 @@
+     pszPersonal = _SHGetFolderUnixPath(CSIDL_PERSONAL|CSIDL_FLAG_DONT_VERIFY);
+     if (!pszPersonal) return;
+ 
+-#if 0
++
+     _SHGetXDGUserDirs(xdg_dirs, num, &xdg_results);
+ 
+     pszHome = getenv("HOME");
+@@ -4168,16 +4168,16 @@
+     }
+     else
+     {
+-#endif
++
+         /* '$HOME' doesn't exist. Create subdirs for 'My Pictures', 'My Videos',
+          * 'My Music' etc. in '%USERPROFILE%\My Documents' or fail silently if
+          * they already exist. */
+         pszHome = NULL;
+         strcpy(szPersonalTarget, pszPersonal);
+         _SHCreateMyDocumentsSubDirs(aidsMyStuff, aids_num, szPersonalTarget);
+-#if 0
++
+     }
+-#endif
++
+ 
+     heap_free(pszPersonal);
+ 
+@@ -4231,7 +4231,7 @@
+     }
+     heap_free(pszPersonal);
+ 
+-#if 0
++
+     _SHGetXDGUserDirs(xdg_dirs, num, &xdg_results);
+ 
+     pszHome = getenv("HOME");
+@@ -4275,7 +4275,7 @@
+         heap_free(pszMyStuff);
+         break;
+     }
+-#endif
++
+ 
+     _SHFreeXDGUserDirs(num, xdg_results);
+ }
+@@ -4301,7 +4301,7 @@
+     pszPersonal = _SHGetFolderUnixPath(CSIDL_PERSONAL|CSIDL_FLAG_CREATE);
+     if (!pszPersonal) return;
+ 
+-#if 0
++
+     _SHGetXDGUserDirs(xdg_dirs, num, &xdg_results);
+ 
+     pszHome = getenv("HOME");
+@@ -4327,7 +4327,7 @@
+             heap_free(pszDesktop);
+         }
+     }
+-#endif
++
+ 
+     _SHFreeXDGUserDirs(num, xdg_results);
+ }
