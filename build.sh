@@ -6,13 +6,14 @@
 # https://github.com/samedog/frankenpup64
 ##########################################################################################
 #
-# 24-03-2020:   -first release
+# 24-03-2020:   - first release
 #               - wine-tkg-git not needed sice GE already has the patches
 ##########################################################################################
 
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
 threads=$(grep -c processor /proc/cpuinfo)
+dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
 
     if [ ! -d "Vulkan-Loader" ];then
@@ -269,6 +270,12 @@ cleanup(){
     fi
     
 }
+
+dxvk(){
+wget https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz
+tar xf dxvk-1.6.tar.gz
+dxvk-1.6/setup_dxvk.sh install
+}
 cleanup
 echo "HELLO THERE!"
 echo "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)"
@@ -288,6 +295,5 @@ echo "building and installing vkd3d (32 and 64 bits)"
 build_vkd3d
 echo "building and installing wine (32 and 64 bits)"
 build_wine
-
-
-
+echo "installnig dxvk"
+dxvk
