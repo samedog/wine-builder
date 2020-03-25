@@ -21,7 +21,7 @@ O_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
 ###
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-threads=threads=$(grep -c processor /proc/cpuinfo)
+threads=$(grep -c processor /proc/cpuinfo)
 dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
 
