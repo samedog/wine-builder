@@ -295,7 +295,7 @@ build_gstreamer(){
         -Dgst_debug=false   \
         -Dgtk_doc=disabled  \
         -Dpackage-origin="git://github.com/GStreamer/gstreamer" \
-        -Dpackage-name="GStreamer (Frankenpup Linux)"  ..
+        -Dpackage-name="GStreamer (Frankenpup Linux)" 
     CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja
     rm -rf /usr/bin/gst-* /usr/lib/gstreamer-1.0
     CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
@@ -367,7 +367,7 @@ build_gstreamer(){
     -Dbuildtype=release \
     -Dgtk_doc=disabled  \
     -Dpackage-origin="http://github.com/GStreamer/gst-plugins-good" \
-    -Dpackage-name="GStreamer (Frankenpup Linux)" &&
+    -Dpackage-name="GStreamer (Frankenpup Linux)" 
     ninja
     ninja install
 }
