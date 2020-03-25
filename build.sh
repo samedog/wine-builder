@@ -9,9 +9,9 @@
 # 24-03-2020:   - first release
 #               - wine-tkg-git not needed sice GE already has the patches
 # 25-03-2020    - fixed dxvk multilib compiling
-#				- added gstramer, gst-plugins-base and gst-plugins-good
-#				- $DIRECTORY used to ensure current location instead of relynig
-#				  on "cd .." chains
+#               - added gstramer, gst-plugins-base and gst-plugins-good
+#               - $DIRECTORY used to ensure current location instead of relynig
+#                 on "cd .." chains
 ##########################################################################################
 ### 
 
@@ -144,7 +144,7 @@ process_repos() {
 }
 
 prepare(){
-	cd "$DIRECTORY"
+    cd "$DIRECTORY"
     cp -rf ./wine ./wine_prepare
     cp -rf ./custom-patches ./wine_prepare/custom-patches
     cp -rf ./gstreamer ./wine_prepare/gstreamer
@@ -160,7 +160,7 @@ prepare(){
 }
 
 patches() {
-	cd "$DIRECTORY"/wine_prepare
+    cd "$DIRECTORY"/wine_prepare
     cd ./game-patches-testing
     ###WE REMOVE A LOT OF UNUSED {BY THS BULDER} STUFF
     sed -i 's/cd \.\.//g' protonprep.sh
@@ -209,7 +209,7 @@ build_headers() {
 }
 
 build_sprv_tools(){
-	cd "$DIRECTORY"/wine_prepare
+    cd "$DIRECTORY"/wine_prepare
     cd ./SPIRV-Tools
     mkdir build64
     mkdir build32
@@ -240,7 +240,7 @@ build_sprv_tools(){
 }
 
 build_vulkan(){
-	cd "$DIRECTORY"/wine_prepare
+    cd "$DIRECTORY"/wine_prepare
     cd ./Vulkan-Loader
     mkdir build64
     mkdir build32
@@ -265,18 +265,18 @@ build_vulkan(){
 }
 
 build_vkd3d(){
-	cd "$DIRECTORY"/wine_prepare
-	cd ./vkd3d
+    cd "$DIRECTORY"/wine_prepare
+    cd ./vkd3d
     ./autogen.sh
     mkdir build32
     mkdir build64
     
     #### 32b
     cd build32
-	export CC='gcc -m32'
-	export CXX='g++ -m32'
-	export PKG_CONFIG_PATH=/usr/lib/pkgconfig
-	export LDFLAGS="-L/usr/lib"
+    export CC='gcc -m32'
+    export CXX='g++ -m32'
+    export PKG_CONFIG_PATH=/usr/lib/pkgconfig
+    export LDFLAGS="-L/usr/lib"
     ../configure --prefix=/usr --libdir=/usr/lib --with-spirv-tools
     make -j"$threads"
     make install
@@ -291,13 +291,13 @@ build_vkd3d(){
 }
 
 build_wine(){
-	cd "$DIRECTORY"/wine_prepare
+    cd "$DIRECTORY"/wine_prepare
     mkdir build32
     mkdir build64
  
-	#### 32b
+    #### 32b
     cd ./build32
-	../configure \
+    ../configure \
         --prefix=/usr \
         --with-x \
         --with-vkd3d \
@@ -320,112 +320,112 @@ build_wine(){
 }
 
 build_gstreamer(){
-	cd "$DIRECTORY"/wine_prepare
-	cd ./gstreamer
-	mkdir build32
-	mkdir build64
-	#### 32b
-	cd    build32
-	export CC='gcc -m32'
-	export CXX='g++ -m32'
-	export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
-	
-	meson  --prefix=/usr       \
-		--libdir=/usr/lib \
-		--bindir=/usr/bin32 \
-		-Dbuildtype=release \
-		-Dgst_debug=false   \
-		-Dgtk_doc=disabled  \
-		-Dpackage-origin="git://github.com/GStreamer/gstreamer" \
-		-Dpackage-name="GStreamer (Frankenpup Linux)" 
-	ninja
-	rm -rf /usr/bin/gst-* /usr/lib/gstreamer-1.0
-	ninja install
-	export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
-	
-	#### 64b
-	cd ../build64 &&
+    cd "$DIRECTORY"/wine_prepare
+    cd ./gstreamer
+    mkdir build32
+    mkdir build64
+    #### 32b
+    cd    build32
+    export CC='gcc -m32'
+    export CXX='g++ -m32'
+    export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
+    
+    meson  --prefix=/usr       \
+        --libdir=/usr/lib \
+        --bindir=/usr/bin32 \
+        -Dbuildtype=release \
+        -Dgst_debug=false   \
+        -Dgtk_doc=disabled  \
+        -Dpackage-origin="git://github.com/GStreamer/gstreamer" \
+        -Dpackage-name="GStreamer (Frankenpup Linux)" 
+    ninja
+    rm -rf /usr/bin/gst-* /usr/lib/gstreamer-1.0
+    ninja install
+    export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
+    
+    #### 64b
+    cd ../build64 &&
 
-	meson  --prefix=/usr       \
-		--libdir=/usr/lib64 \
-		-Dbuildtype=release \
-		-Dgst_debug=false   \
-		-Dgtk_doc=disabled  \
-		-Dpackage-origin="http://github.com/GStreamer/gstreamer" \
-		-Dpackage-name="GStreamer (Frankenpup Linux)" 
-	ninja
-	rm -rf /usr/bin/gst-* /usr/{lib64,libexec}/gstreamer-1.0
-	ninja install
-	
-	cd ../../gst-plugins-base
-	
-	mkdir build32
-	mkdir build64
-	#### 32b
-	cd    build32
-	export CC='gcc -m32'
-	export CXX='g++ -m32'
-	export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
-	
-	meson  --prefix=/usr       \
-	--libdir=/usr/lib \
-	--bindir=/usr/bin32 \
-	-Dbuildtype=release \
-	-Dgtk_doc=disabled  \
-	-Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
-	-Dpackage-name="GStreamer (Frankenpup Linux)" 
+    meson  --prefix=/usr       \
+        --libdir=/usr/lib64 \
+        -Dbuildtype=release \
+        -Dgst_debug=false   \
+        -Dgtk_doc=disabled  \
+        -Dpackage-origin="http://github.com/GStreamer/gstreamer" \
+        -Dpackage-name="GStreamer (Frankenpup Linux)" 
+    ninja
+    rm -rf /usr/bin/gst-* /usr/{lib64,libexec}/gstreamer-1.0
+    ninja install
+    
+    cd ../../gst-plugins-base
+    
+    mkdir build32
+    mkdir build64
+    #### 32b
+    cd    build32
+    export CC='gcc -m32'
+    export CXX='g++ -m32'
+    export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
+    
+    meson  --prefix=/usr       \
+    --libdir=/usr/lib \
+    --bindir=/usr/bin32 \
+    -Dbuildtype=release \
+    -Dgtk_doc=disabled  \
+    -Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
+    -Dpackage-name="GStreamer (Frankenpup Linux)" 
 
-	ninja
-	ninja install
-	export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
-	
-	#### 64b
-	cd ../build64
+    ninja
+    ninja install
+    export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
+    
+    #### 64b
+    cd ../build64
 
-	meson  --prefix=/usr       \
-	--libdir=/usr/lib64 \
-	--bindir=/usr/bin \
-	-Dbuildtype=release \
-	-Dgtk_doc=disabled  \
-	-Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
-	-Dpackage-name="GStreamer (Frankenpup Linux)" 
-	ninja
-	ninja install
-	
-	cd ../../gst-plugins-base
-	
-	mkdir build32
-	mkdir build64
-	#### 32b
-	cd    build32
-	export CC='gcc -m32'
-	export CXX='g++ -m32'
-	export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
-	
-	meson  --prefix=/usr       \
-	--libdir=/usr/lib \
-	--bindir=/usr/bin32 \
-	-Dbuildtype=release \
-	-Dgtk_doc=disabled  \
-	-Dpackage-origin="http://github.com/GStreamer/gst-good" \
-	-Dpackage-name="GStreamer (Frankenpup Linux)" 
+    meson  --prefix=/usr       \
+    --libdir=/usr/lib64 \
+    --bindir=/usr/bin \
+    -Dbuildtype=release \
+    -Dgtk_doc=disabled  \
+    -Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
+    -Dpackage-name="GStreamer (Frankenpup Linux)" 
+    ninja
+    ninja install
+    
+    cd ../../gst-plugins-base
+    
+    mkdir build32
+    mkdir build64
+    #### 32b
+    cd    build32
+    export CC='gcc -m32'
+    export CXX='g++ -m32'
+    export PKG_CONFIG_PATH='/usr/lib/pkgconfig'
+    
+    meson  --prefix=/usr       \
+    --libdir=/usr/lib \
+    --bindir=/usr/bin32 \
+    -Dbuildtype=release \
+    -Dgtk_doc=disabled  \
+    -Dpackage-origin="http://github.com/GStreamer/gst-good" \
+    -Dpackage-name="GStreamer (Frankenpup Linux)" 
 
-	ninja
-	ninja install
-	export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
-	
-	#### 64b
-	cd ../build64
+    ninja
+    ninja install
+    export PKG_CONFIG_PATH="$O_PKG_CONFIG_PATH"
+    
+    #### 64b
+    cd ../build64
 
-	meson  --prefix=/usr       \
-	--libdir=/usr/lib64 \
-	--bindir=/usr/bin \
-	-Dbuildtype=release \
-	-Dgtk_doc=disabled  \
-	-Dpackage-origin="http://github.com/GStreamer/gst-plugins-good" \
-	-Dpackage-name="GStreamer (Frankenpup Linux)" &&
-	ninja
-	ninja install
+    meson  --prefix=/usr       \
+    --libdir=/usr/lib64 \
+    --bindir=/usr/bin \
+    -Dbuildtype=release \
+    -Dgtk_doc=disabled  \
+    -Dpackage-origin="http://github.com/GStreamer/gst-plugins-good" \
+    -Dpackage-name="GStreamer (Frankenpup Linux)" &&
+    ninja
+    ninja install
 }
 
 
@@ -437,10 +437,10 @@ cleanup(){
 }
 
 dxvk(){
-	cd "$DIRECTORY"
-	wget https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz
-	tar xf dxvk-1.6.tar.gz
-	dxvk-1.6/setup_dxvk.sh install
+    cd "$DIRECTORY"
+    wget https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz
+    tar xf dxvk-1.6.tar.gz
+    dxvk-1.6/setup_dxvk.sh install
 }
 
 cleanup
