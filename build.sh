@@ -294,9 +294,20 @@ build_wine(){
     cd "$DIRECTORY"/wine_prepare
     mkdir build32
     mkdir build64
- 
+     #### 64b
+    cd ./build64
+    ../configure \
+        --prefix=/usr \
+        --libdir=/usr/lib64 \
+        --with-x \
+        --with-vkd3d \
+        --with-gstreamer \
+        --enable-win64
+    make -j"$threads"
+    make -j"$threads" install
+    
     #### 32b
-    cd ./build32
+    cd ../build32
     ../configure \
         --prefix=/usr \
         --with-x \
@@ -305,18 +316,9 @@ build_wine(){
         --with-gstreamer \
         --with-wine64="$DIRECTORY/wine_prepare/build64"
     make -j"$threads"
-    make install
+    make -j"$threads" install
       
-    #### 64b
-    cd ../build64
-    ../configure \
-        --prefix=/usr \
-        --libdir=/usr/lib64 \
-        --with-x \
-        --with-vkd3d \
-        --with-gstreamer \
-        --enable-win64
-    make install
+
 }
 
 build_gstreamer(){
