@@ -3,7 +3,7 @@
 ##########################################################################################
 # By Diego Cardenas "The Samedog" under GNU GENERAL PUBLIC LICENSE Version 2, June 1991
 # (www.gnu.org/licenses/old-licenses/gpl-2.0.html) e-mail: the.samedog[]gmail.com.
-# https://github.com/samedog/frankenpup64
+# https://github.com/samedog/wine-builder
 ##########################################################################################
 #
 # 24-03-2020:   - first release
