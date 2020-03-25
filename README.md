@@ -1,2 +1,2 @@
-# wine-bulder
-my personal wine-bulder "system"
+# wine-builder
+my personal wine-builder "system"
