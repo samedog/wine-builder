@@ -14,9 +14,11 @@
 #                 on "cd .." chains
 ##########################################################################################
 
+
+
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-threads=16
+threads=$(grep -c processor /proc/cpuinfo)
 dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
 
@@ -286,17 +288,17 @@ build_gstreamer(){
     mkdir build64
     #### 32b
     cd    ./build32
-    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' meson  --prefix=/usr       \
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' meson  --prefix=/usr      \
         --libdir=/usr/lib \
         --bindir=/usr/bin32 \
         -Dbuildtype=release \
         -Dgst_debug=false   \
         -Dgtk_doc=disabled  \
         -Dpackage-origin="git://github.com/GStreamer/gstreamer" \
-        -Dpackage-name="GStreamer (Frankenpup Linux)" 
-    ninja
+        -Dpackage-name="GStreamer (Frankenpup Linux)"  ..
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja
     rm -rf /usr/bin/gst-* /usr/lib/gstreamer-1.0
-    ninja install
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
     
     #### 64b
     cd ../build64 
@@ -325,8 +327,8 @@ build_gstreamer(){
     -Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
     -Dpackage-name="GStreamer (Frankenpup Linux)" 
 
-    ninja
-    ninja install
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
     
     #### 64b
     cd ../build64
@@ -354,8 +356,8 @@ build_gstreamer(){
     -Dpackage-origin="http://github.com/GStreamer/gst-good" \
     -Dpackage-name="GStreamer (Frankenpup Linux)" 
 
-    ninja
-    ninja install
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
     
     #### 64b
     cd ../build64
@@ -421,23 +423,33 @@ echo "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATC
 
 echo "cleanup"
 cleanup
+
 echo "cloning repos"
 process_repos
+
 echo "preparing folders..."
 prepare
+
 echo "applying patchs to wine source..."
 patches
+
 echo "building headers"
 build_headers
+
 echo "building SPIRV-Tools (32 and 64 bits)"
 build_sprv_tools
+
 echo "building and installing vulkan (32 and 64 bits)"
 build_vulkan
+
 echo "building and installing vkd3d (32 and 64 bits)"
 build_vkd3d
+
 echo "building and installing gstreamer (32 and 64 bits)"
 build_gstreamer
+
 echo "building and installing wine (32 and 64 bits)"
 build_wine
+
 echo "installnig dxvk"
 dxvk
