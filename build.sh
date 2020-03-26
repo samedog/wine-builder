@@ -13,8 +13,8 @@
 #               - $DIRECTORY used to ensure current location instead of relynig
 #                 on "cd .." chains
 ##########################################################################################
-
-
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
@@ -195,14 +195,24 @@ build_headers() {
     cd build
     cmake -DCMAKE_INSTALL_PREFIX=/usr ..
     make -j"$threads"
-    make install
+	if [ $? -eq 0 ]; then
+		make install
+	else
+		echo "something went wrong making SPIRV-Headers"
+		exit 1
+	fi
     ##
     cd ../../Vulkan-Headers
     mkdir build
     cd build
     cmake -DCMAKE_INSTALL_PREFIX=/usr ..
     make -j"$threads"
-    make install
+	if [ $? -eq 0 ]; then
+		make install
+	else
+		echo "something went wrong making Vulkan-Headers 64bits"
+		exit 1
+	fi
 }
 
 build_sprv_tools(){
@@ -220,7 +230,13 @@ build_sprv_tools(){
         -DBUILD_SHARED_LIBS=ON \
         -DSPIRV-Headers_SOURCE_DIR=$DIRECTORY/wine_prepare/SPIRV-Headers ..
     make -j"$threads"
-    make install
+	if [ $? -eq 0 ]; then
+		make install
+	else
+		printf $RED"something went wrong making SPIRV-Tools 32bits"$NC
+		exit 1
+	fi
+    
     
     #### 64b
     cd ../build64
@@ -232,7 +248,12 @@ build_sprv_tools(){
         -DBUILD_SHARED_LIBS=ON \
         -DSPIRV-Headers_SOURCE_DIR=$DIRECTORY/wine_prepare/SPIRV-Headers ..
     make -j"$threads"
-    make install
+	if [ $? -eq 0 ]; then
+		make install
+	else
+		printf $RED"something went wrong making SPIRV-Tools 64bits"$NC
+		exit 1
+	fi
     ##
 }
 
@@ -295,7 +316,7 @@ build_gstreamer(){
         -Dgst_debug=false   \
         -Dgtk_doc=disabled  \
         -Dpackage-origin="git://github.com/GStreamer/gstreamer" \
-        -Dpackage-name="GStreamer (Frankenpup Linux)"  ..
+        -Dpackage-name="GStreamer (Frankenpup Linux)"
     CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja
     rm -rf /usr/bin/gst-* /usr/lib/gstreamer-1.0
     CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
@@ -308,7 +329,7 @@ build_gstreamer(){
         -Dgst_debug=false   \
         -Dgtk_doc=disabled  \
         -Dpackage-origin="http://github.com/GStreamer/gstreamer" \
-        -Dpackage-name="GStreamer (Frankenpup Linux)" 
+        -Dpackage-name="GStreamer (Frankenpup Linux)"
     ninja
     rm -rf /usr/bin/gst-* /usr/{lib64,libexec}/gstreamer-1.0
     ninja install
