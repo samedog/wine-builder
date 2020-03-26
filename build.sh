@@ -1,4 +1,4 @@
-!/bin/sh
+#!/bin/sh
 ## build wine with vkd3d + deps
 ##########################################################################################
 # By Diego Cardenas "The Samedog" under GNU GENERAL PUBLIC LICENSE Version 2, June 1991
@@ -290,7 +290,7 @@ build_gstreamer(){
     cd    ./build32
     CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' meson  --prefix=/usr      \
         --libdir=/usr/lib \
-        --bindir=/usr/bin32 \
+        --bindir=/usr/bin/32 \
         -Dbuildtype=release \
         -Dgst_debug=false   \
         -Dgtk_doc=disabled  \
@@ -321,7 +321,7 @@ build_gstreamer(){
     cd    ./build32
     CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' meson  --prefix=/usr       \
     --libdir=/usr/lib \
-    --bindir=/usr/bin32 \
+    --bindir=/usr/bin/32 \
     -Dbuildtype=release \
     -Dgtk_doc=disabled  \
     -Dpackage-origin="http://github.com/GStreamer/gst-plugins-base" \
@@ -350,7 +350,7 @@ build_gstreamer(){
     cd    ./build32
    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' meson  --prefix=/usr       \
     --libdir=/usr/lib \
-    --bindir=/usr/bin32 \
+    --bindir=/usr/bin/32 \
     -Dbuildtype=release \
     -Dgtk_doc=disabled  \
     -Dpackage-origin="http://github.com/GStreamer/gst-good" \
