@@ -55,7 +55,7 @@ supported flags:
 
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-threads=threads=$(grep -c processor /proc/cpuinfo)
+threads=threads=threads=$(grep -c processor /proc/cpuinfo)
 dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
     
@@ -662,7 +662,7 @@ build_gstreamer(){
     -Dpackage-name="GStreamer (Frankenpup Linux)" 
     PATH=$p_nq LD_LIBRARY_PATH=$ldlp_nq CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja
     if [ $? -eq 0 ]; then
-        CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
+       PATH=$p_nq LD_LIBRARY_PATH=$ldlp_nq CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install
     else
         printf $RED"something went wrong making gst-plugins-good 32bits"$NC
         exit 1
@@ -693,19 +693,23 @@ build_wine(){
     mkdir build32
     mkdir build64
      #### 64b
+     
+	 if [[ $NBGST -eq 0 || $GST -eq 1 ]];then
+		END_ARG="--enable-win64 \
+		--with-gstreamer" 
+	else
+		END_ARG="--enable-win64"
+	fi
+	
     cd ./build64
     ../configure \
         --prefix=/usr \
         --libdir=/usr/lib64 \
         --with-x \
         --with-vkd3d \
+        $END_ARG
         
-        if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
-            --enable-win64 \
-            --with-gstreamer 
-        else
-            --enable-win64
-        fi
+
         
     make -j"$threads"
     if [ $? -eq 0 ]; then
@@ -716,19 +720,21 @@ build_wine(){
     fi
     
     #### 32b
+    
+	if [[ $NBGST -eq 0 || $GST -eq 1 ]];then
+		END_ARG="--with-wine64="$DIRECTORY/wine_prepare/build64" \
+		--with-gstreamer "
+	else
+		END_ARG="--with-wine64=$DIRECTORY/wine_prepare/build64"
+	fi
     cd ../build32
     PKG_CONFIG_PATH="/usr/lib/pkgconfig" ../configure \
         --prefix=/usr \
         --with-x \
         --with-vkd3d \
         --libdir=/usr/lib \
+        $END_ARG
 
-        if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
-            --with-wine64="$DIRECTORY/wine_prepare/build64" \
-            --with-gstreamer 
-        else
-            --with-wine64="$DIRECTORY/wine_prepare/build64"
-        fi
         
     make -j"$threads"
     if [ $? -eq 0 ]; then
@@ -786,10 +792,9 @@ build_vulkan
 echo "building and installing vkd3d (32 and 64 bits)"
 build_vkd3d
 
-if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
+if [[ $NBGST -eq 0 || $GST -eq 1 ]];then
     echo "building and installing gstreamer deps (32 and 64 bits)"
     build_gstreamer_deps
-
     echo "building and installing gstreamer (32 and 64 bits)"
     build_gstreamer
 else
