@@ -700,7 +700,7 @@ build_wine(){
         --with-x \
         --with-vkd3d \
         
-        if [ $NBGST==0 ] || [ GST==1 ];then
+        if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
             --enable-win64 \
             --with-gstreamer 
         else
@@ -723,7 +723,7 @@ build_wine(){
         --with-vkd3d \
         --libdir=/usr/lib \
 
-        if [ $NBGST==0 ] || [ GST==1 ];then
+        if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
             --with-wine64="$DIRECTORY/wine_prepare/build64" \
             --with-gstreamer 
         else
