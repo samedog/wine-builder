@@ -786,7 +786,7 @@ build_vulkan
 echo "building and installing vkd3d (32 and 64 bits)"
 build_vkd3d
 
-if [ $NBGST==0 ] || [ GST==1 ];then
+if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
     echo "building and installing gstreamer deps (32 and 64 bits)"
     build_gstreamer_deps
 
