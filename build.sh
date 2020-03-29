@@ -209,7 +209,7 @@ process_repos() {
         git init
         git remote add -f origin git://github.com/GloriousEggroll/proton-ge-custom
         git config core.sparseCheckout true
-        echo "game-patches-testing/" >> .git/info/sparse-checkout
+        echo "patches/" >> .git/info/sparse-checkout
         git pull origin proton-ge-5
         cd ..
     else
