@@ -153,7 +153,7 @@ process_repos() {
     fi
 
     if [ ! -d "vkd3d" ];then
-        git clone git://github.com/doitsujin/vkd3d
+        git clone git://github.com/d3d12/vkd3d
     else
         cd ./vkd3d
         git reset --hard HEAD
@@ -793,7 +793,7 @@ build_vulkan
 echo "building and installing vkd3d (32 and 64 bits)"
 build_vkd3d
 
-if [ $NBGST -eq 0 ] || [ $GST -eq 1 ]];then
+if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
     echo "building and installing gstreamer deps (32 and 64 bits)"
     build_gstreamer_deps
     echo "building and installing gstreamer (32 and 64 bits)"
