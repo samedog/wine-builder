@@ -55,7 +55,7 @@ supported flags:
 
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-threads=threads=threads=$(grep -c processor /proc/cpuinfo)
+threads=$(grep -c processor /proc/cpuinfo)
 dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
     
@@ -209,14 +209,14 @@ process_repos() {
         git init
         git remote add -f origin git://github.com/GloriousEggroll/proton-ge-custom
         git config core.sparseCheckout true
-        echo "patches/" >> .git/info/sparse-checkout
+        echo "patches/" > .git/info/sparse-checkout
         git pull origin proton-ge-5
         cd ..
     else
         cd ./proton-ge-custom/
         git reset --hard HEAD
-    git clean -xdf
-        echo "game-patches-testing/" >> .git/info/sparse-checkout
+		git clean -xdf
+        echo "patches/" > .git/info/sparse-checkout
         git pull origin proton-ge-5
         cd ..
     fi
@@ -234,7 +234,7 @@ prepare(){
     cp -rf ./gst-plugins-base ./wine_prepare/gst-plugins-base
     cp -rf ./gst-plugins-good ./wine_prepare/gst-plugins-good
     cp -rf ./wine-staging ./wine_prepare/wine-staging
-    cp -rf ./proton-ge-custom/game-patches-testing/ ./wine_prepare/game-patches-testing
+    cp -rf ./proton-ge-custom/patches/ ./wine_prepare/patches
     cp -rf ./vkd3d ./wine_prepare/vkd3d
     cp -rf ./SPIRV-Headers ./wine_prepare/SPIRV-Headers
     cp -rf ./SPIRV-Tools ./wine_prepare/SPIRV-Tools
@@ -244,7 +244,7 @@ prepare(){
 
 patches() {
     cd "$DIRECTORY"/wine_prepare
-    cd ./game-patches-testing
+    cd ./patches
     ###WE REMOVE A LOT OF UNUSED {BY THS BULDER} STUFF
     sed -i 's/cd \.\.//g' protonprep.sh
     sed -i 's/cd dxvk//g' protonprep.sh
@@ -252,23 +252,23 @@ patches() {
     sed -i 's/cd wine//g' protonprep.sh
     sed -i 's/git checkout lsteamclient//g' protonprep.sh
     sed -i 's/cd lsteamclient//g' protonprep.sh
-    sed -i 's+patch -Np1 < ../game-patches-testing/proton-hotfixes/steamclient-disable_SteamController007_if_no_controller.patch++g' protonprep.sh
+    sed -i 's+patch -Np1 < \.\./patches/proton-hotfixes/steamclient-disable_SteamController007_if_no_controller.patch++g' protonprep.sh
     sed -i 's/git clean -xdf//g' protonprep.sh
-    sed -i 's+patch -Np1 < \.\./game-patches-testing/dxvk-patches/valve-dxvk-avoid-spamming-log-with-requests-for-IWineD3D11Texture2D.patch++g' protonprep.sh
-    sed -i 's+patch -Np1 < \.\./game-patches-testing/dxvk-patches/proton-add_new_dxvk_config_library.patch++g' protonprep.sh
+    sed -i 's+patch -Np1 < \.\./patches/dxvk/valve-dxvk-avoid-spamming-log-with-requests-for-IWineD3D11Texture2D.patch++g' protonprep.sh
+    sed -i 's+patch -Np1 < \.\./patches/dxvk/proton-add_new_dxvk_config_library.patch++g' protonprep.sh
     sed -i 's+\.\./wine-staging/patches/patchinstall.sh+wine-staging/patches/patchinstall.sh+g' protonprep.sh
     sed -i 's+patch -Np1 < \.\./+patch -Np1 < +g' protonprep.sh
     sed -i 's/git reset --hard HEAD//g' protonprep.sh
     sed -i 's/git clean -xdf//g' protonprep.sh
     sed -i '39d' protonprep.sh
     
-    sed -i 's*dlls/mfreadwrite/main.c | 5 +++--*dlls/mfreadwrite/reader.c | 5 +++--*g' proton-valve-patches/proton-protonify_staging.patch
-    sed -i 's*diff --git a/dlls/mfreadwrite/main.c b/dlls/mfreadwrite/main.c*diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/read.c*g' proton-valve-patches/proton-protonify_staging.patch
-    sed -i 's*--- a/dlls/mfreadwrite/main.c*--- a/dlls/mfreadwrite/reader.c*g' proton-valve-patches/proton-protonify_staging.patch
-    sed -i 's*+++ b/dlls/mfreadwrite/main.c*+++ b/dlls/mfreadwrite/reader.c*g' proton-valve-patches/proton-protonify_staging.patch
+    #sed -i 's*dlls/mfreadwrite/main.c | 5 +++--*dlls/mfreadwrite/reader.c | 5 +++--*g' proton-valve-patches/proton-protonify_staging.patch
+    #sed -i 's*diff --git a/dlls/mfreadwrite/main.c b/dlls/mfreadwrite/main.c*diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/read.c*g' proton-valve-patches/proton-protonify_staging.patch
+    #sed -i 's*--- a/dlls/mfreadwrite/main.c*--- a/dlls/mfreadwrite/reader.c*g' proton-valve-patches/proton-protonify_staging.patch
+    #sed -i 's*+++ b/dlls/mfreadwrite/main.c*+++ b/dlls/mfreadwrite/reader.c*g' proton-valve-patches/proton-protonify_staging.patch
     cd ..
 
-    ./game-patches-testing/protonprep.sh
+    ./patches/protonprep.sh
     ## revert the steamuser patch
     patch -Np1 < ./custom-patches/revert.patch
     ## revert the Never create links patch
