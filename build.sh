@@ -19,15 +19,20 @@
 # 27-03-2020    - Fixed libvpx configuring options
 # 28-03-2020    - Added gstreamer subdeps
 #               - Added some flags
+# 01-04-2020    - Multiple fixes
+# 02-04-2020    - Added threads cli argument
+#               - 
 ##########################################################################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 ARGS="$@"
 REPOFLAG=0
 NBGST=0
-
+PTCHSTP=0
 GST=1
-
+threads=$(grep -c processor /proc/cpuinfo)
 for ARG in $ARGS
     do
         if [ $ARG == "--only-repos" ];then
@@ -37,12 +42,20 @@ for ARG in $ARGS
             echo "
 supported flags:
 --only-repos            : Only pull git repos and download tar packages.
+--patch-stop            : Only get to patch wine {for testing purposes}.
 --no-build-gstreamer    : Don't build gstreamer, meant for proper distros
                           with package managers.
 --without-gstreamer     : Disable gstreamer support entirely.
+--threads=x             : Number of compiling threads.
 --h --help -h           : Show this help and exit.
 "
             exit 1
+        fi
+        if [ $ARG == "--patch-stop" ];then
+            PTCHSTP=1
+        fi
+        if [ $ARG == "--threads*" ];then
+            threads=$(echo $threads | -cut -d'=' -f2)
         fi
         if [ $ARG == "--no-build-gstreamer" ];then
             NBGST=1
@@ -55,7 +68,6 @@ supported flags:
 
 DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-threads=$(grep -c processor /proc/cpuinfo)
 dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 process_repos() {
     
@@ -129,7 +141,7 @@ process_repos() {
         git reset --hard HEAD
         git clean -xdf
         git pull origin master
-        cd ..
+       cd ..
     fi
     
     if [ ! -d "wine-staging" ];then
@@ -153,7 +165,7 @@ process_repos() {
     fi
 
     if [ ! -d "vkd3d" ];then
-        git clone git://github.com/d3d12/vkd3d
+        git clone git://github.com/HansKristian-Work/vkd3d
     else
         cd ./vkd3d
         git reset --hard HEAD
@@ -245,11 +257,12 @@ prepare(){
 patches() {
     cd "$DIRECTORY"/wine_prepare
     cd ./patches
-    ###WE REMOVE A LOT OF UNUSED {BY THS BULDER} STUFF
+    ###WE REMOVE A LOT OF UNUSED STUFF
     sed -i 's/cd \.\.//g' protonprep.sh
     sed -i 's/cd dxvk//g' protonprep.sh
     sed -i 's/cd vkd3d//g' protonprep.sh
     sed -i 's/cd wine//g' protonprep.sh
+    sed -i 's/cd glib//g' protonprep.sh
     sed -i 's/git checkout lsteamclient//g' protonprep.sh
     sed -i 's/cd lsteamclient//g' protonprep.sh
     sed -i 's+patch -Np1 < \.\./patches/proton-hotfixes/steamclient-disable_SteamController007_if_no_controller.patch++g' protonprep.sh
@@ -260,12 +273,16 @@ patches() {
     sed -i 's+patch -Np1 < \.\./+patch -Np1 < +g' protonprep.sh
     sed -i 's/git reset --hard HEAD//g' protonprep.sh
     sed -i 's/git clean -xdf//g' protonprep.sh
+    sed -i 's+for _f in ../+for _f in ./+g' protonprep.sh
+    sed -i 's+patch -Np1 < patches/glib/glib_python3_hack.patch++g' protonprep.sh
+
     sed -i '39d' protonprep.sh
     
     #sed -i 's*dlls/mfreadwrite/main.c | 5 +++--*dlls/mfreadwrite/reader.c | 5 +++--*g' proton-valve-patches/proton-protonify_staging.patch
     #sed -i 's*diff --git a/dlls/mfreadwrite/main.c b/dlls/mfreadwrite/main.c*diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/read.c*g' proton-valve-patches/proton-protonify_staging.patch
     #sed -i 's*--- a/dlls/mfreadwrite/main.c*--- a/dlls/mfreadwrite/reader.c*g' proton-valve-patches/proton-protonify_staging.patch
     #sed -i 's*+++ b/dlls/mfreadwrite/main.c*+++ b/dlls/mfreadwrite/reader.c*g' proton-valve-patches/proton-protonify_staging.patch
+    ## NOT NEEDED ANYMORE
     cd ..
 
     ./patches/protonprep.sh
@@ -277,7 +294,7 @@ patches() {
     #patch -Np1 < ./custom-patches/winevulkan.patch
     ## more winevulkan pathces
     #patch -Np1 < ./custom-patches/winevulkan2.patch
-    #####
+    #####  
 }
 
 
@@ -293,7 +310,7 @@ build_headers() {
     if [ $? -eq 0 ]; then
         make install &>> "$DIRECTORY"/logs/SPIRV-Headers
     else
-        echo "something went wrong making SPIRV-Headers"
+        printf $RED"something went wrong making SPIRV-Headers\n"$NC
         exit 1
     fi
     ##
@@ -305,7 +322,7 @@ build_headers() {
     if [ $? -eq 0 ]; then
         make install &>> "$DIRECTORY"/logs/Vulkan-Headers
     else
-        echo "something went wrong making Vulkan-Headers 64bits"
+        printf $RED"something went wrong making Vulkan-Headers 64bits\n"$NC
         exit 1
     fi
 }
@@ -326,7 +343,7 @@ build_gstreamer_deps() {
         echo "something went wrong making libdv 32bits"
         exit 1
     fi
-    make -j"$threads" clean
+    make -j"$threads" clean &>> "$DIRECTORY"/logs/libdv-1.0.0
     
     ./configure --prefix=/usr \
     --disable-xv \
@@ -337,7 +354,7 @@ build_gstreamer_deps() {
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/libdv-1.0.0
     else
-        echo "something went wrong making libdv 64bits"
+        printf $RED"something went wrong making libdv 64bits\n"$NC
         exit 1
     fi
     
@@ -365,7 +382,7 @@ build_gstreamer_deps() {
     if [ $? -eq 0 ]; then 
         make install &>> "$DIRECTORY"/logs/libvpx
     else 
-        printf $RED"something went wrong making libvpx 64bits"$NC
+        printf $RED"something went wrong making libvpx 64bits\n"$NC
         exit 1
     fi
     
@@ -388,10 +405,10 @@ build_gstreamer_deps() {
     if [ $? -eq 0 ]; then
         i386 make -j"$threads" install &>> "$DIRECTORY"/logs/libvpx
     else
-        printf $RED"something went wrong making libvpx 32bits"$NC
+        printf $RED"something went wrong making libvpx 32bits\n"$NC
         exit 1
     fi
-    make -j"$threads" clean
+    make -j"$threads" clean &>> /dev/null
     
     cd ../../libpsl
     sed -i 's/env python/&3/' src/psl-make-dafsa &&
@@ -400,12 +417,12 @@ build_gstreamer_deps() {
     ./autogen.sh &> "$DIRECTORY"/logs/libpsl
     cd ./build64
     
-    ../configure --prefix=/usr --libdir=/usr/lib64 --disable-static &> "$DIRECTORY"/logs/libpsl
+    ../configure --prefix=/usr --libdir=/usr/lib64 --disable-static &>> "$DIRECTORY"/logs/libpsl
     make -j"$threads" &>> "$DIRECTORY"/logs/libpsl
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/libpsl
     else
-        printf $RED"something went wrong making libpsl 64bits"$NC
+        printf $RED"something went wrong making libpsl 64bits\n"$NC
         exit 1
     fi
     
@@ -416,7 +433,7 @@ build_gstreamer_deps() {
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/libpsl
     else
-        printf $RED"something went wrong making libpsl 32bits"$NC
+        printf $RED"something went wrong making libpsl 32bits\n"$NC
         exit 1
     fi
     
@@ -425,13 +442,13 @@ build_gstreamer_deps() {
     mkdir build32
     cd    ./build64
 
-    meson --prefix=/usr --libdir=/usr/lib64 -Dvapi=enabled -Dgssapi=disabled .. &> "$DIRECTORY"/logs/libsoup-2.70.0
-    ninja
+    meson --prefix=/usr --libdir=/usr/lib64 -Dvapi=enabled -Dgssapi=disabled .. &> "$DIRECTORY"/logs/libsoup-2.70.0 &> "$DIRECTORY"/logs/libsoup-2.70.0
+    ninja &>> "$DIRECTORY"/logs/libsoup-2.70.0
     if [ $? -eq 0 ]; then
         rm -rf /usr/bin/gst-* /usr/{lib64,libexec}/gstreamer-1.0 &>> "$DIRECTORY"/logs/libsoup-2.70.0
         ninja install &>> "$DIRECTORY"/logs/libsoup-2.70.0
     else
-        printf $RED"something went wrong making lbsoup 64bits"$NC
+        printf $RED"something went wrong making lbsoup 64bits\n"$NC
         exit 1
     fi
     cd    ../build32
@@ -446,7 +463,7 @@ build_gstreamer_deps() {
     if [ $? -eq 0 ]; then
         CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install &>> "$DIRECTORY"/logs/libsoup-2.70.0
     else
-        printf $RED"something went wrong making libsoup 32bits"$NC
+        printf $RED"something went wrong making libsoup 32bits\n"$NC
         exit 1
     fi
 
@@ -472,7 +489,7 @@ build_sprv_tools(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/SPIRV-Tools
     else
-        printf $RED"something went wrong making SPIRV-Tools 32bits"$NC
+        printf $RED"something went wrong making SPIRV-Tools 32bits\n"$NC
         exit 1
     fi
     
@@ -490,7 +507,7 @@ build_sprv_tools(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/SPIRV-Tools
     else
-        printf $RED"something went wrong making SPIRV-Tools 64bits"$NC
+        printf $RED"something went wrong making SPIRV-Tools 64bits\n"$NC
         exit 1
     fi
     ##
@@ -514,7 +531,7 @@ build_vulkan(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/Vulkan-Loader
     else
-        printf $RED"something went wrong making Vulkan-Loader 32bits"$NC
+        printf $RED"something went wrong making Vulkan-Loader 32bits\n"$NC
         exit 1
     fi
     #### 64b
@@ -527,7 +544,7 @@ build_vulkan(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/Vulkan-Loader
     else
-        printf $RED"something went wrong making Vulkan-Loader 63bits"$NC
+        printf $RED"something went wrong making Vulkan-Loader 63bits\n"$NC
         exit 1
     fi
 }
@@ -535,18 +552,18 @@ build_vulkan(){
 build_vkd3d(){
     cd "$DIRECTORY"/wine_prepare
     cd ./vkd3d
-    ./autogen.sh
+    ./autogen.sh &> "$DIRECTORY"/logs/vkd3d
     mkdir build32
     mkdir build64
     
     #### 32b
     cd build32
-    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH=/usr/lib/pkgconfig LDFLAGS="-L/usr/lib" ../configure --prefix=/usr --libdir=/usr/lib --with-spirv-tools &> "$DIRECTORY"/logs/vkd3d
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH=/usr/lib/pkgconfig LDFLAGS="-L/usr/lib" ../configure --prefix=/usr --libdir=/usr/lib --with-spirv-tools &>> "$DIRECTORY"/logs/vkd3d
     make -j"$threads" &>> "$DIRECTORY"/logs/vkd3d
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/vkd3d
     else
-        printf $RED"something went wrong making vkd3d 32bits"$NC
+        printf $RED"something went wrong making vkd3d 32bits\n"$NC
         exit 1
     fi
 
@@ -557,7 +574,7 @@ build_vkd3d(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/vkd3d
     else
-        printf $RED"something went wrong making vkd3d 64bits"$NC
+        printf $RED"something went wrong making vkd3d 64bits\n"$NC
         exit 1
     fi
 }
@@ -582,7 +599,7 @@ build_gstreamer(){
         rm -rf /usr/bin32/gst-* /usr/lib/gstreamer-1.0 &>> "$DIRECTORY"/logs/gstreamer
         CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install &>> "$DIRECTORY"/logs/gstreamer
     else
-        printf $RED"something went wrong making gstreamer 32bits"$NC
+        printf $RED"something went wrong making gstreamer 32bits\n"$NC
         exit 1
     fi
 
@@ -602,7 +619,7 @@ build_gstreamer(){
         rm -rf /usr/bin/gst-* /usr/{lib64,libexec}/gstreamer-1.0 &>> "$DIRECTORY"/logs/gstreamer
         ninja install &>> "$DIRECTORY"/logs/gstreamer
     else
-        printf $RED"something went wrong making gstreamer 64bits"$NC
+        printf $RED"something went wrong making gstreamer 64bits\n"$NC
         exit 1
     fi
     cd ../../gst-plugins-base
@@ -623,7 +640,7 @@ build_gstreamer(){
     if [ $? -eq 0 ]; then
         CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install &>> "$DIRECTORY"/logs/gst-plugins-base
     else
-        printf $RED"something went wrong making gst-plugins-base 32bits"$NC
+        printf $RED"something went wrong making gst-plugins-base 32bits\n"$NC
         exit 1
     fi
     
@@ -640,7 +657,7 @@ build_gstreamer(){
     if [ $? -eq 0 ]; then
         ninja install  &>> "$DIRECTORY"/logs/gst-plugins-base
     else
-        printf $RED"something went wrong making gst-plugins-base 64bits"$NC
+        printf $RED"something went wrong making gst-plugins-base 64bits\n"$NC
         exit 1
     fi
     cd ../../gst-plugins-good
@@ -663,7 +680,7 @@ build_gstreamer(){
     if [ $? -eq 0 ]; then
        PATH=$p_nq LD_LIBRARY_PATH=$ldlp_nq CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH='/usr/lib/pkgconfig' ninja install &>> "$DIRECTORY"/logs/gst-plugins-good
     else
-        printf $RED"something went wrong making gst-plugins-good 32bits"$NC
+        printf $RED"something went wrong making gst-plugins-good 32bits\n"$NC
         exit 1
     fi
     
@@ -681,7 +698,7 @@ build_gstreamer(){
     if [ $? -eq 0 ]; then
         ninja install &>> "$DIRECTORY"/logs/gst-plugins-good
     else
-        printf $RED"something went wrong making gst-plugins-good 64bits"$NC
+        printf $RED"something went wrong making gst-plugins-good 64bits\n"$NC
         exit 1
     fi
 }
@@ -714,7 +731,7 @@ build_wine(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/wine
     else
-        printf $RED"something went wrong making wine 64bits"$NC
+        printf $RED"something went wrong making wine 64bits\n"$NC
         exit 1
     fi
     
@@ -741,7 +758,7 @@ build_wine(){
     if [ $? -eq 0 ]; then
         make -j"$threads" install &>> "$DIRECTORY"/logs/wine
     else
-        printf $RED"something went wrong making wine 32bits"$NC
+        printf $RED"something went wrong making wine 32bits\n"$NC
         exit 1
     fi
       
@@ -763,47 +780,53 @@ dxvk(){
     dxvk-1.6/setup_dxvk.sh install
 }
 
-echo "HELLO THERE!"
-echo "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)"
+printf $GREEN"HELLO THERE!\n"
+printf "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)\n\n"$NC
 
-echo "cleanup"
+
+printf $YELLOW"cleanup\n"$NC
 cleanup
 
-echo "cloning repos"
+printf $GREEN"cloning repos\n"$NC
 process_repos
 if [ $REPOFLAG -eq 1 ];then
     exit 1
 fi
 
-echo "preparing folders..."
+printf $YELLOW"preparing folders...\n"$NC
 prepare
 
-echo "applying patchs to wine source..."
+printf $YELLOW"applying patches to wine source...\n"$NC
 patches
-
-echo "building headers"
+if [ $PTCHSTP -eq 1 ];then
+    exit 1
+fi
+printf $YELLOW"building headers\n"$NC
 build_headers
 
-echo "building SPIRV-Tools (32 and 64 bits)"
+printf $GREEN"building SPIRV-Tools (32 and 64 bits)\n"$NC
 build_sprv_tools
 
-echo "building and installing vulkan (32 and 64 bits)"
+printf $GREEN"building and installing vulkan (32 and 64 bits)\n"$NC
 build_vulkan
 
-echo "building and installing vkd3d (32 and 64 bits)"
+printf $GREEN"building and installing vkd3d (32 and 64 bits)\n"$NC
 build_vkd3d
 
 if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
-    echo "building and installing gstreamer deps (32 and 64 bits)"
+    printf $GREEN"building and installing gstreamer deps (32 and 64 bits)\n"$NC
     build_gstreamer_deps
-    echo "building and installing gstreamer (32 and 64 bits)"
+    printf $GREEN"building and installing gstreamer (32 and 64 bits)\n"$NC
     build_gstreamer
 else
-    echo "Skipping gstreamer (32 and 64 bits)"
+    printf $RED"Skipping gstreamer (32 and 64 bits)\n"$NC
 fi
 
-echo "building and installing wine (32 and 64 bits)"
+printf $GREEN"building and installing wine (32 and 64 bits)\n"$NC
 build_wine
 
-echo "installnig dxvk"
+printf $GREEN"installnig dxvk\n"$NC
 dxvk
+
+printf $YELLOW"cleanup\n"$NC
+cleanup
