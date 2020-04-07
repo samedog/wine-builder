@@ -206,11 +206,16 @@ process_repos() {
 
     if [ ! -d "wine" ];then
         git clone git://source.winehq.org/git/wine.git
+        cd ./wine
+        git clean -fxd
+        git pull --force
+        git reset --hard "$(../wine-staging/patches/patchinstall.sh --upstream-commit)"
+        cd ..
     else
         cd ./wine
         git clean -fxd
         git pull --force
-        git reset --hard HEAD
+        git reset --hard "$(../wine-staging/patches/patchinstall.sh --upstream-commit)"
         cd ..
     fi
     
@@ -275,8 +280,12 @@ patches() {
     sed -i 's/git clean -xdf//g' protonprep.sh
     sed -i 's+for _f in ../+for _f in ./+g' protonprep.sh
     sed -i 's+patch -Np1 < patches/glib/glib_python3_hack.patch++g' protonprep.sh
-
-    sed -i '39d' protonprep.sh
+    sed -i 's/cd gst-plugins-ugly//g' protonprep.sh
+    sed -i "s/echo \"add Guy's patch to fix wmv playback in gst-plugins-ugly\"//g" protonprep.sh
+    sed -i "s/git revert --no-commit bae4776c571cf975be1689594f4caf93ad23e0ca//g" protonprep.sh
+    sed -i "s/git revert --no-commit 5e218fe758fe6beed5c7ad73405eccf33c307e6d//g" protonprep.sh
+    sed -i 's+patch -Np1 < patches/gstreamer/asfdemux-always_re-initialize_metadata_and_global_metadata.patch++g' protonprep.sh
+    #sed -i '39d' protonprep.sh
     
     #sed -i 's*dlls/mfreadwrite/main.c | 5 +++--*dlls/mfreadwrite/reader.c | 5 +++--*g' proton-valve-patches/proton-protonify_staging.patch
     #sed -i 's*diff --git a/dlls/mfreadwrite/main.c b/dlls/mfreadwrite/main.c*diff --git a/dlls/mfreadwrite/reader.c b/dlls/mfreadwrite/read.c*g' proton-valve-patches/proton-protonify_staging.patch
