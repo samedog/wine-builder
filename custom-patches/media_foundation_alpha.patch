@@ -9396,7 +9396,7 @@ index cad3db033b..e655d72b3b 100644
 # #include "ntdll_misc.h"
 # 
 # WINE_DECLARE_DEBUG_CHANNEL(pid);
-3@@ -103,10 +104,22 @@ static void add_option( const char *name, unsigned char set, unsigned char clear
+#@@ -103,10 +104,22 @@ static void add_option( const char *name, unsigned char set, unsigned char clear
 #     nb_debug_options++;
 # }
 # 
