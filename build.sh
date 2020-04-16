@@ -316,14 +316,16 @@ patches() {
     sed -i 's+patch -Np1 < patches/wine-hotfixes/0001-ntdll-re-enable_wine_dl_functions_to_fix_wineboot_in.patch+#patch -Np1 < patches/wine-hotfixes/0001-ntdll-re-enable_wine_dl_functions_to_fix_wineboot_in.patch+g' protonprep.sh
     sed -i 's/git revert --no-commit e22bcac706be3afac67f4faac3aca79fd67c3d6f/#git revert --no-commit e22bcac706be3afac67f4faac3aca79fd67c3d6f/g' protonprep.sh 
     sed -i 's/git revert --no-commit 387bf24376ac7da9c72c22e1724a03f546a2d0c6/#git revert --no-commit 387bf24376ac7da9c72c22e1724a03f546a2d0c6/g' protonprep.sh  
-    sed -i "s+patch -Np1 < patches/wine-hotfixes/staging-44d1a45-localreverts.patch+cd $DIRECTORY/wine-staging \n git reset --hard HEAD \n git clean -xdf \n patch -Np1 < ../wine_prepare/custom-patches/staging-44d1a45-localreverts.patch \n cd $DIRECTORY/wine_prepare+g" protonprep.sh  
+    sed -i "s+patch -Np1 < patches/wine-hotfixes/staging-44d1a45-localreverts.patch+cd $DIRECTORY/wine_prepare/wine-staging/ \n git reset --hard HEAD \n git clean -xdf \n patch -Np1 < $DIRECTORY/wine_prepare/custom-patches/staging-44d1a45-localreverts.patch \n cd $DIRECTORY/wine_prepare+g" protonprep.sh  
     sed -i 's+patches/wine-hotfixes/media_foundation_alpha+custom-patches/media_foundation_alpha+g' protonprep.sh
     cd ..
-    cp -rf ../wine-staging ./wine-staging
+
+
         
     
     
     ./patches/protonprep.sh
+    
     ## revert the steamuser patch
     patch -Np1 < ./custom-patches/revert.patch
     ## revert the Never create links patch
@@ -332,6 +334,7 @@ patches() {
     patch -Np1 < ./custom-patches/fsync-to-latest-ntdll.patch
     
     #####  
+    #cp -prf "$DIRECTORY"/wine-staging ./wine-staging
 }
 
 build_headers() {
