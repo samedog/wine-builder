@@ -1,8 +1,7 @@
 # wine-builder
-my personal wine-builder "system" for use on puppylinux or puppy derivates {puplets}
-The milestone marks a "should work on any system" state since the first builds were only meant to work on my personal distro frankenpup
+my personal wine-builder "system" for use on puppylinux or puppy derivates {puplets}.
 
-Due to my latest updates this should actually build on any system, regardless if it is a puppylinux based distro or not, not sure tho, needs testing.
+Due to my latest updates this should actually build on any system, regardless if it is a puppylinux based distro or not (not 100% sure tho, needs testing).
 
 current tested wine-staging commit: 029c249e789fd8b05d8c1eeda48deb8810bbb751
 
