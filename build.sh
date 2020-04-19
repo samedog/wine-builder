@@ -26,11 +26,19 @@
 #               - Added more info and a confirmation before doing anything
 #               - Added custom patches for some new wine implementations
 # 13-05-2020    - Updates for wine commit 4f673d5386f44d4af4459a95b3059cfb887db8c9
+# 19-05-2020    - Updates for wine-staging commit 029c249e789fd8b05d8c1eeda48deb8810bbb751
+#               - Now the script will work on tested commits by default
+#               - Added libusb to the wine deps due to current update requiring 
+#                 newer functions
+#               - Now the versioning will use wine-staging commit instead wine
 ##########################################################################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
+DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
+dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
 ARGS="$@"
 REPOFLAG=0
 NBGST=0
@@ -39,13 +47,38 @@ GST=1
 DST=0
 DEST=""
 THRD=0
+LUSB=1
 threads=$(grep -c processor /proc/cpuinfo)
+LWC=$(./wine-staging/patches/patchinstall.sh --upstream-commit)
+LWSC=$(cat ./last_working_commit | grep "wine-staging" | cut -d':' -f2)
+LWPGEC=$(cat ./last_working_commit | grep "proton-ge" | cut -d':' -f2)
 for ARG in $ARGS
     do
         if [ $ARG == "--only-repos" ];then
             REPOFLAG=1
-        fi
-        if [ $ARG == "--h" ] || [ $ARG == "--help" ] || [ $ARG == "-h" ];then
+        elif [ $ARG == "--no-libusb" ];then
+			$LUSB=0
+        elif [ $ARG == "--latest" ];then
+			$LWSC="HEAD"
+			$LWPGEC="HEAD"
+        elif [ $ARG == "--patch-stop" ];then
+            PTCHSTP=1
+        elif [[ $ARG == "--threads"* ]];then
+            THRD=1
+            threads=$(echo $ARG | cut -d'=' -f2)
+        elif [ $ARG == "--no-build-gstreamer" ];then
+            NBGST=1
+        elif [ $ARG == "--without-gstreamer" ];then
+            NBGST=1
+            GST=0
+        elif [[ $ARG == "--dest"* ]];then
+            DST=1
+            DEST=$(echo $ARG | cut -d'=' -f2)
+        elif [[ $ARG == "--last-working"* ]];then
+            LWC=$(cat "$DIRECTORY"/last_working_commit)
+            echo $LWC
+            exit 1
+        elif [ $ARG == "--h" ] || [ $ARG == "--help" ] || [ $ARG == "-h" ];then
             echo "
 supported flags:
 --only-repos            : Only pull git repos and download tar packages.
@@ -56,37 +89,21 @@ supported flags:
 --threads=x             : Number of compiling threads.
 --h --help -h           : Show this help and exit.
 --dest=/path/to/dest    : DESTDIR like argument.
+--last-working          : Use the last working commit (manually updated) 
+--latest				: Overrides the safe last_working_commit file
+--no-libusb             : Skip building libusb
 "
             exit 1
         fi
-        if [ $ARG == "--patch-stop" ];then
-            PTCHSTP=1
-        fi
-        if [[ $ARG == "--threads"* ]];then
-            THRD=1
-            threads=$(echo $ARG | cut -d'=' -f2)
-        fi
-        if [ $ARG == "--no-build-gstreamer" ];then
-            NBGST=1
-        fi
-        if [ $ARG == "--without-gstreamer" ];then
-            NBGST=1
-            GST=0
-        fi
-        if [[ $ARG == "--dest"* ]];then
-            DST=1
-            DEST=$(echo $ARG | cut -d'=' -f2)
-        fi
     done
 
-DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-DIRECTORY="$(echo $DIRECTORY | sed 's/ /\\ /g')"
-dxvk_version="https://github.com/doitsujin/dxvk/releases/download/v1.6/dxvk-1.6.tar.gz"
+
 
 cleanup(){
     cd "$DIRECTORY"
     if [ -d "wine_prepare" ];then
         rm -rf ./wine_prepare
+        sleep 1
     fi
     
 }
@@ -115,11 +132,20 @@ process_repos() {
         rm -rf libsoup-2.70.0.tar.xz
     fi
     
-    
     if [ ! -d "Vulkan-Loader" ];then
         git clone git://github.com/KhronosGroup/Vulkan-Loader
     else
         cd ./Vulkan-Loader
+        git reset --hard HEAD
+        git clean -xdf
+        git pull origin master
+        cd ..
+    fi
+    
+    if [ ! -d "libusb" ];then
+        git clone git://github.com/libusb/libusb.git
+    else
+        cd ./libusb
         git reset --hard HEAD
         git clean -xdf
         git pull origin master
@@ -168,9 +194,16 @@ process_repos() {
     
     if [ ! -d "wine-staging" ];then
         git clone https://github.com/wine-staging/wine-staging
+        if [ $LWSC != "HEAD" ];then
+			cd ./wine-staging
+			git reset --hard $LWSC
+			git clean -xdf
+			git pull origin master
+			cd ..
+        fi
     else
         cd ./wine-staging
-        git reset --hard HEAD
+        git reset --hard $LWSC
         git clean -xdf
         git pull origin master
         cd ..
@@ -200,19 +233,19 @@ process_repos() {
         git clone git://github.com/GStreamer/gstreamer
     else
         cd ./gstreamer
+        git reset --hard HEAD
         git clean -fxd
         git pull --force
-        git reset --hard HEAD
         cd ..
     fi
     
     if [ ! -d "gst-plugins-base" ];then
         git clone git://github.com/GStreamer/gst-plugins-base
     else
-        cd ./gst-plugins-base
+		cd ./gst-plugins-base
+        git reset --hard HEAD
         git clean -fxd
         git pull --force
-        git reset --hard HEAD
         cd ..
     fi
     
@@ -229,18 +262,17 @@ process_repos() {
     if [ ! -d "wine" ];then
         git clone git://source.winehq.org/git/wine.git
         cd ./wine
+        git reset --hard "$LWC"
         git clean -fxd
         git pull --force
-        git reset --hard "$(../wine-staging/patches/patchinstall.sh --upstream-commit)"
         cd ..
     else
         cd ./wine
+        git reset --hard "$LWC"
         git clean -fxd
         git pull --force
-        git reset --hard "$(../wine-staging/patches/patchinstall.sh --upstream-commit)"
         cd ..
     fi
-    
     
     if [ ! -d "proton-ge-custom" ];then
         mkdir ./proton-ge-custom
@@ -249,11 +281,14 @@ process_repos() {
         git remote add -f origin git://github.com/GloriousEggroll/proton-ge-custom
         git config core.sparseCheckout true
         echo "patches/" > .git/info/sparse-checkout
+        if [ $LWPGEC != "HEAD" ];then
+			git reset --hard $LWPGEC
+        fi
         git pull origin proton-ge-5
         cd ..
     else
         cd ./proton-ge-custom/
-        git reset --hard HEAD
+        git reset --hard $LWPGEC
         git clean -xdf
         echo "patches/" > .git/info/sparse-checkout
         git pull origin proton-ge-5
@@ -268,6 +303,7 @@ prepare(){
     cp -rf ./custom-patches ./wine_prepare/custom-patches
     cp -rf ./libdv-1.0.0 ./wine_prepare/libdv-1.0.0
     cp -rf ./libvpx ./wine_prepare/libvpx    
+    cp -rf ./libusb ./wine_prepare/libusb    
     cp -rf ./libpsl ./wine_prepare/libpsl   
     cp -rf ./libsoup-2.70.0 ./wine_prepare/libsoup-2.70.0   
     cp -rf ./gstreamer ./wine_prepare/gstreamer
@@ -288,7 +324,6 @@ patches() {
     ###WE REMOVE A LOT OF UNUSED STUFF
     sed -i 's/cd \.\./#cd \.\./g' protonprep.sh
     sed -i 's/cd dxvk/#cd dxvk/g' protonprep.sh
-    sed -i 's/cd vkd3d/#cd vkd3d/g' protonprep.sh
     sed -i 's/cd glib/#cd glib/g' protonprep.sh
     sed -i 's/cd wine/#cd wine/g' protonprep.sh
     sed -i 's/git checkout lsteamclient/#git checkout lsteamclient/g' protonprep.sh
@@ -305,7 +340,7 @@ patches() {
     sed -i 's+patch -Np1 < patches/glib/glib_python3_hack.patch+#patch -Np1 < patches/glib/glib_python3_hack.patch+g' protonprep.sh
     sed -i 's/cd gst-plugins-ugly/#cd gst-plugins-ugly/g' protonprep.sh
     sed -i "s/echo \"add Guy's patch to fix wmv playback in gst-plugins-ugly\"/#echo \"add Guy's patch to fix wmv playback in gst-plugins-ugly\"/g" protonprep.sh
-    sed -i 's+patch -Np1 < patches/gstreamer/asfdemux-always_re-initialize_metadata_and_global_metadata.patch+#patch -Np1 < patches/gstreamer/asfdemux-always_re-initialize_metadata_and_global_metadata.patch+g' protonprep.sh
+    sed -i 's+patch -Np1 < patches/gstreamer/+#patch -Np1 < patches/gstreamer/+g' protonprep.sh
     sed -i 's+git checkout vrclient_x64+#git checkout vrclient_x64+g' protonprep.sh
     sed -i 's+cd vrclient_x64+#cd vrclient_x64+g' protonprep.sh
     sed -i 's+patch -Np1 < patches/proton-hotfixes/vrclient-use_standard_dlopen_instead_of_the_libwine_wrappers.patch++g' protonprep.sh
@@ -316,18 +351,23 @@ patches() {
     sed -i 's+patch -Np1 < patches/wine-hotfixes/0001-ntdll-re-enable_wine_dl_functions_to_fix_wineboot_in.patch+#patch -Np1 < patches/wine-hotfixes/0001-ntdll-re-enable_wine_dl_functions_to_fix_wineboot_in.patch+g' protonprep.sh
     sed -i 's/git revert --no-commit e22bcac706be3afac67f4faac3aca79fd67c3d6f/#git revert --no-commit e22bcac706be3afac67f4faac3aca79fd67c3d6f/g' protonprep.sh 
     sed -i 's/git revert --no-commit 387bf24376ac7da9c72c22e1724a03f546a2d0c6/#git revert --no-commit 387bf24376ac7da9c72c22e1724a03f546a2d0c6/g' protonprep.sh  
-    sed -i "s+patch -Np1 < patches/wine-hotfixes/staging-44d1a45-localreverts.patch+cd $DIRECTORY/wine_prepare/wine-staging/ \n git reset --hard HEAD \n git clean -xdf \n patch -Np1 < $DIRECTORY/wine_prepare/custom-patches/staging-44d1a45-localreverts.patch \n cd $DIRECTORY/wine_prepare+g" protonprep.sh  
+    sed -i "s+patch -Np1 < patches/wine-hotfixes/staging-44d1a45-localreverts.patch+cd $DIRECTORY/wine_prepare/wine-staging/ \n patch -Np1 < $DIRECTORY/wine_prepare/custom-patches/staging-44d1a45-localreverts.patch \n cd $DIRECTORY/wine_prepare+g" protonprep.sh  
     sed -i 's+patches/wine-hotfixes/media_foundation_alpha+custom-patches/media_foundation_alpha+g' protonprep.sh
+    sed -i "s+patch -Np1 < patches/vkd3d/mhw-vkd3d.patch+#patch -Np1 < patches/vkd3d/mhw-vkd3d.patch+g" protonprep.sh
+    sed -i "s+git revert --no-commit da7d60bf97fb8726828e57f852e8963aacde21e9+cd $DIRECTORY/wine_prepare \n git revert --no-commit da7d60bf97fb8726828e57f852e8963aacde21e9+g" protonprep.sh
+    sed -i 's+patches/proton/proton-rawinput+custom-patches/proton-rawinput+g' protonprep.sh
+    sed -i 's+patches/proton/proton-protonify_staging.patch+custom-patches/proton-protonify_staging.patch+g' protonprep.sh
+    sed -i 's+patches/proton/proton-steam-bits.patch+custom-patches/proton-steam-bits.patch+g' protonprep.sh
+    sed -i 's+patch -Np1 < patches/wine-hotfixes/mhw-dxgi-fixes.patch+patch -Np1 < custom-patches/mhw-dxgi-fixes.patch+g' protonprep.sh
+    sed -i 's+patch -Np1 < patches/wine-hotfixes/user32-Set_PAINTSTRUCT+patch -Np1 < custom-patches/user32-Set_PAINTSTRUCT+g' protonprep.sh
     cd ..
 
 
-        
-    
     
     ./patches/protonprep.sh
-    
+    #exit 1
     ## revert the steamuser patch
-    patch -Np1 < ./custom-patches/revert.patch
+    #patch -Np1 < ./custom-patches/revert.patch not needed for now
     ## revert the Never create links patch
     patch -Np1 < ./custom-patches/revert2.patch
     ## ntdll changes are not yet reflected into fsync.c
@@ -829,6 +869,42 @@ build_gstreamer(){
     fi
 }
 
+build_wine_deps_libusb(){
+    cd "$DIRECTORY"/wine_prepare
+    cd ./libusb
+
+    #### 32b
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH=/usr/lib/pkgconfig LDFLAGS="-L/usr/lib" ./autogen.sh &> "$DIRECTORY"/logs/libusb
+    CC='gcc -m32' CXX='g++ -m32' PKG_CONFIG_PATH=/usr/lib/pkgconfig LDFLAGS="-L/usr/lib" ./configure --prefix=/usr --bindir=/usr/bin/32 --libdir=/usr/lib  &>> "$DIRECTORY"/logs/libusb
+    make -j"$threads" &>> "$DIRECTORY"/logs/libusb
+    if [ $? -eq 0 ]; then
+        if [ $DST -eq 1 ]; then
+            make -j"$threads" install DESTDIR="$DEST" &>> "$DIRECTORY"/logs/libusb
+        else
+            make -j"$threads" install &>> "$DIRECTORY"/logs/libusb
+        fi
+    else
+        printf $RED"something went wrong making libusb 32bits\n"$NC
+        exit 1
+    fi
+
+    #### 64b
+    make distclean &>> "$DIRECTORY"/logs/libusb
+    ./autogen.sh &>> "$DIRECTORY"/logs/libusb
+    ./configure --prefix=/usr --libdir=/usr/lib64 &>> "$DIRECTORY"/logs/libusb
+    make -j"$threads" &>> "$DIRECTORY"/logs/libusb
+    if [ $? -eq 0 ]; then
+        if [ $DST -eq 1 ]; then
+            make -j"$threads" install DESTDIR="$DEST" &>> "$DIRECTORY"/logs/libusb
+        else
+            make -j"$threads" install &>> "$DIRECTORY"/logs/libusb
+        fi
+    else
+        printf $RED"something went wrong making libusb 64bits\n"$NC
+        exit 1
+    fi
+}
+
 build_wine(){
     cd "$DIRECTORY"/wine_prepare
     mkdir build32
@@ -896,8 +972,11 @@ dxvk(){
 }
 
 printf $GREEN"HELLO THERE!\n"
-printf "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)\n"$NC
-printf "\n"$NC
+printf "THIS SMALL SCRIPT WILL BUILD VULKAN, WINE AND VKD3D (AND GAME RELATED PATCHES)\n"
+printf "USING WINE COMMIT $LWC\n"
+printf "USING WINE-STAGING COMMIT $LWSC\n"
+printf "USING PROTON-GE PATCHES COMMIT $LWPGEC"$NC
+printf "\n"
 if [ $THRD -eq 1 ] || [ $DST -eq 1 ] || [ $REPOFLAG -eq 1 ] || [ $PTCHSTP -eq 1 ] || [ $NBGST -eq 1 ] || [ $GST -eq 0 ];then
     printf $YELLOW"Options:\n"$NC
 fi
@@ -970,7 +1049,14 @@ if [ $NBGST -eq 0 ] || [ $GST -eq 1 ];then
     printf $GREEN"building and installing gstreamer (32 and 64 bits)\n"$NC
     build_gstreamer
 else
-    printf $RED"Skipping gstreamer (32 and 64 bits)\n"$NC
+    printf $RED"Skipping gstreamer\n"$NC
+fi
+
+if [ $LUSB -eq 0 ];then
+    printf $GREEN"building and installing libusb (32 and 64 bits)\n"$NC
+    build_wine_deps_libusb
+else
+    printf $RED"Skipping libusb\n"$NC
 fi
 
 printf $GREEN"building and installing wine (32 and 64 bits)\n"$NC
@@ -982,7 +1068,6 @@ else
     printf $GREEN"installnig dxvk\n"$NC
     dxvk
 fi
-
 
 printf $YELLOW"cleanup\n"$NC
 cleanup
