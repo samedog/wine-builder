@@ -5,7 +5,6 @@
 # (www.gnu.org/licenses/old-licenses/gpl-2.0.html) e-mail: the.samedog[]gmail.com.
 # https://github.com/samedog/wine-builder
 ##########################################################################################
-#
 # 24-03-2020:   - First release
 #               - Wine-tkg-git not needed sice GE already has the patches
 #               - Addded custom patches to rollback proton behaviour 
