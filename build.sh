@@ -30,6 +30,7 @@
 #               - Added libusb to the wine deps due to current update requiring 
 #                 newer functions
 #               - Now the versioning will use wine-staging commit instead wine
+# 21-05-2020    - OOPSIE WOOPSIE!! uwu I made a fucky wucky!! A wittle fucko boingo! 
 ##########################################################################################
 RED='\033[0;31m'
 NC='\033[0m' # No Color
@@ -48,7 +49,8 @@ DEST=""
 THRD=0
 LUSB=1
 threads=$(grep -c processor /proc/cpuinfo)
-LWC=$(./wine-staging/patches/patchinstall.sh --upstream-commit)
+LWC=$(cat ./last_working_commit | grep -m1 "wine" | cut -d':' -f2)
+WCWS=$(./wine-staging/patches/patchinstall.sh --upstream-commit)
 LWSC=$(cat ./last_working_commit | grep "wine-staging" | cut -d':' -f2)
 LWPGEC=$(cat ./last_working_commit | grep "proton-ge" | cut -d':' -f2)
 for ARG in $ARGS
@@ -56,10 +58,11 @@ for ARG in $ARGS
         if [ $ARG == "--only-repos" ];then
             REPOFLAG=1
         elif [ $ARG == "--no-libusb" ];then
-			$LUSB=0
+            LUSB=0
         elif [ $ARG == "--latest" ];then
-			$LWSC="HEAD"
-			$LWPGEC="HEAD"
+            LWC="HEAD"
+            LWSC="HEAD"
+            LWPGEC="HEAD"
         elif [ $ARG == "--patch-stop" ];then
             PTCHSTP=1
         elif [[ $ARG == "--threads"* ]];then
@@ -89,7 +92,7 @@ supported flags:
 --h --help -h           : Show this help and exit.
 --dest=/path/to/dest    : DESTDIR like argument.
 --last-working          : Use the last working commit (manually updated) 
---latest				: Overrides the safe last_working_commit file
+--latest                : Overrides the safe last_working_commit file
 --no-libusb             : Skip building libusb
 "
             exit 1
@@ -135,8 +138,8 @@ process_repos() {
         git clone git://github.com/KhronosGroup/Vulkan-Loader
     else
         cd ./Vulkan-Loader
-        git reset --hard HEAD
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -145,8 +148,8 @@ process_repos() {
         git clone git://github.com/libusb/libusb.git
     else
         cd ./libusb
-        git reset --hard HEAD
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -155,8 +158,9 @@ process_repos() {
         git clone git://github.com/rockdaboot/libpsl
     else
         cd ./libpsl
-        git reset --hard HEAD
+        
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -165,8 +169,9 @@ process_repos() {
         git clone git://github.com/webmproject/libvpx.git
     else
         cd ./libvpx
-        git reset --hard HEAD
+        
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -175,8 +180,9 @@ process_repos() {
         git clone git://github.com/KhronosGroup/SPIRV-Headers
     else
         cd ./SPIRV-Headers
-        git reset --hard HEAD
+        
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -185,35 +191,18 @@ process_repos() {
         git clone https://github.com/KhronosGroup/SPIRV-Tools
     else
         cd ./SPIRV-Tools
-        git reset --hard HEAD
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
        cd ..
     fi
     
-    if [ ! -d "wine-staging" ];then
-        git clone https://github.com/wine-staging/wine-staging
-        if [ $LWSC != "HEAD" ];then
-			cd ./wine-staging
-			git reset --hard $LWSC
-			git clean -xdf
-			git pull origin master
-			cd ..
-        fi
-    else
-        cd ./wine-staging
-        git reset --hard $LWSC
-        git clean -xdf
-        git pull origin master
-        cd ..
-    fi
-
     if [ ! -d "Vulkan-Headers" ];then
         git clone git://github.com/KhronosGroup/Vulkan-Headers
     else
         cd ./Vulkan-Headers
-        git reset --hard HEAD
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -222,8 +211,8 @@ process_repos() {
         git clone git://github.com/HansKristian-Work/vkd3d
     else
         cd ./vkd3d
-        git reset --hard HEAD
         git clean -xdf
+        git reset --hard HEAD
         git pull origin master
         cd ..
     fi
@@ -232,19 +221,20 @@ process_repos() {
         git clone git://github.com/GStreamer/gstreamer
     else
         cd ./gstreamer
-        git reset --hard HEAD
+        
         git clean -fxd
-        git pull --force
+        git reset --hard HEAD
+        git pull origin master
         cd ..
     fi
     
     if [ ! -d "gst-plugins-base" ];then
         git clone git://github.com/GStreamer/gst-plugins-base
     else
-		cd ./gst-plugins-base
-        git reset --hard HEAD
+        cd ./gst-plugins-base
         git clean -fxd
-        git pull --force
+        git reset --hard HEAD
+        git pull origin master
         cd ..
     fi
     
@@ -253,23 +243,57 @@ process_repos() {
     else
         cd ./gst-plugins-good
         git clean -fxd
-        git pull --force
         git reset --hard HEAD
+        git pull origin master
+        
+        cd ..
+    fi
+    
+    if [ ! -d "wine-staging" ];then
+        git clone https://github.com/wine-staging/wine-staging
+        cd ./wine-staging
+        git clean -xdf
+        if [ $LWSC == "HEAD" ];then
+            git reset --hard HEAD
+            git pull origin master
+        else
+            git reset --hard $LWSC
+            git pull origin $LWSC
+        fi
+    else
+        cd ./wine-staging
+        git clean -xdf
+        if [ $LWSC == "HEAD" ];then
+            git reset --hard HEAD
+            git pull origin master
+        else
+            git reset --hard $LWSC
+            git pull origin $LWSC
+        fi
         cd ..
     fi
 
     if [ ! -d "wine" ];then
         git clone git://source.winehq.org/git/wine.git
         cd ./wine
-        git reset --hard "$LWC"
-        git clean -fxd
-        git pull --force
+        if [ $LWC == "HEAD" ];then
+            git reset --hard $WCWS
+            git pull origin $WCWS
+        else
+            git reset --hard $LWC
+            git pull origin $LWC
+        fi
         cd ..
     else
         cd ./wine
-        git reset --hard "$LWC"
         git clean -fxd
-        git pull --force
+        if [ $LWC == "HEAD" ];then
+            git reset --hard $WCWS
+            git pull origin $WCWS
+        else
+            git reset --hard $LWC
+            git pull origin $LWC
+        fi
         cd ..
     fi
     
@@ -280,17 +304,26 @@ process_repos() {
         git remote add -f origin git://github.com/GloriousEggroll/proton-ge-custom
         git config core.sparseCheckout true
         echo "patches/" > .git/info/sparse-checkout
-        if [ $LWPGEC != "HEAD" ];then
+        if [ $LWPGEC == "HEAD" ];then
+            git reset --hard $LWPGEC
+            git pull origin proton-ge-5
+        else
 			git reset --hard $LWPGEC
+			git pull origin $LWPGEC
         fi
-        git pull origin proton-ge-5
+        
         cd ..
     else
         cd ./proton-ge-custom/
-        git reset --hard $LWPGEC
         git clean -xdf
         echo "patches/" > .git/info/sparse-checkout
-        git pull origin proton-ge-5
+        if [ $LWPGEC == "HEAD" ];then
+            git reset --hard $LWPGEC
+            git pull origin proton-ge-5
+        else
+			git reset --hard $LWPGEC
+			git pull origin $LWPGEC
+        fi
         cd ..
     fi
 }
