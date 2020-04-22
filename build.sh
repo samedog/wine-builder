@@ -50,7 +50,6 @@ THRD=0
 LUSB=1
 threads=$(grep -c processor /proc/cpuinfo)
 LWC=$(cat ./last_working_commit | grep -m1 "wine" | cut -d':' -f2)
-WCWS=$(./wine-staging/patches/patchinstall.sh --upstream-commit)
 LWSC=$(cat ./last_working_commit | grep "wine-staging" | cut -d':' -f2)
 LWPGEC=$(cat ./last_working_commit | grep "proton-ge" | cut -d':' -f2)
 for ARG in $ARGS
@@ -260,6 +259,8 @@ process_repos() {
             git reset --hard $LWSC
             git pull origin $LWSC
         fi
+        cd ..
+        WCWS=$(./wine-staging/patches/patchinstall.sh --upstream-commit)
     else
         cd ./wine-staging
         git clean -xdf
@@ -271,6 +272,7 @@ process_repos() {
             git pull origin $LWSC
         fi
         cd ..
+        WCWS=$(./wine-staging/patches/patchinstall.sh --upstream-commit)
     fi
 
     if [ ! -d "wine" ];then
@@ -311,7 +313,6 @@ process_repos() {
 			git reset --hard $LWPGEC
 			git pull origin $LWPGEC
         fi
-        
         cd ..
     else
         cd ./proton-ge-custom/
