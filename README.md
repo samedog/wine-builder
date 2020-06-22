@@ -20,7 +20,7 @@ options list:
 --threads=x             : Number of compiling threads.
 --dest=/path/to/dest    : DESTDIR like argument.
 --last-working          : Use the last working commit (manually updated) 
---latest			    : Overrides the safe last_working_commit file
+--latest                : Overrides the safe last_working_commit file
 --no-libusb             : Skip building libusb
 --h --help -h           : Show this help and exit.
 ```
