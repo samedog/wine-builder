@@ -3,7 +3,7 @@ my personal wine-builder "system" for use on puppylinux or puppy derivates {pupl
 
 Due to my latest updates this should actually build on any system, regardless if it is a puppylinux based distro or not (not 100% sure tho, needs testing).
 
-current tested wine-staging commit: 029c249e789fd8b05d8c1eeda48deb8810bbb751
+current working wine-staging commit: 7b5a0e5a94f3b203adc367e7cc0ef4d33be13c9c
 
 usage:
 ```bash
@@ -20,7 +20,7 @@ options list:
 --threads=x             : Number of compiling threads.
 --dest=/path/to/dest    : DESTDIR like argument.
 --last-working          : Use the last working commit (manually updated) 
---latest			        	: Overrides the safe last_working_commit file
+--latest			    : Overrides the safe last_working_commit file
 --no-libusb             : Skip building libusb
 --h --help -h           : Show this help and exit.
 ```
